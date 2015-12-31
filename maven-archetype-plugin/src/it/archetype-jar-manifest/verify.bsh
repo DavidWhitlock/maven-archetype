@@ -19,57 +19,56 @@
  */
 
 import java.io.*;
+import java.util.jar.*;
 import org.codehaus.plexus.util.*;
 
-basedir = new File( basedir, "target/test-classes/projects/basic/project/basic" );
-
-File main = new File( basedir, "src/main" );
-
-// check <fileset packaged="true">
-File app = new File( main, "java/build/archetype/App.java" );
-if ( !app.isFile() )
+void fail( String message )
 {
-    throw new Exception( app + " file is missing or not a file." );
+    throw new Exception(message);
 }
 
-// check __propertyName__ path replacement
-File artifactId = new File( main, "resources/test-basic.properties" );
-if ( !artifactId.isFile() )
+void assertTrue( String message, boolean test )
 {
-    throw new Exception( artifactId + " file is missing or not a file." );
+    if ( !test )
+    {
+        fail( message );
+    }
 }
 
-File packageInPathFormat = new File( main, "resources/build/archetype/build.archetype.properties" );
-if ( !packageInPathFormat.isFile() )
+void assertNotNull( String message, Object o )
 {
-    throw new Exception( packageInPathFormat + " file is missing or not a file." );
+    if ( o == null )
+    {
+        fail( message );
+    }
 }
 
-// ARCHETYPE-289 check empty directory creation
-File empty = new File( main, "resources/empty-directory" );
-if ( !empty.isDirectory() )
+void assertJarFileContainsEntryWithNonZeroSize( JarFile jar, String jarEntryName )
 {
-    throw new Exception( empty + " directory is missing or not a directory." );
-}
-File filteredEmpty = new File( main, "resources/basic-empty-directory" );
-if ( !filteredEmpty.isDirectory() )
-{
-    throw new Exception( filteredEmpty + " directory is missing or not a directory." );
+    entry = jar.getJarEntry( jarEntryName );
+    assertNotNull( "Could not find jar file entry named " + jarEntryName , entry );
+    assertTrue( "Jar file entry with zero or negative size: " + jarEntryName, entry.getSize() > 0 );
 }
 
-// ARCHETYPE-334 check generated project has been compiled
-File appClass = new File( basedir, "target/classes/build/archetype/App.class" );
-if ( !appClass.isFile() )
+void assertJarFileContainsEntryWithZeroSize( JarFile jar, String jarEntryName )
 {
-    throw new Exception( appClass + " not here: generated project not compiled?" );
+    entry = jar.getJarEntry( jarEntryName );
+    assertNotNull( "Could not find jar file entry named " + jarEntryName , entry );
+    assertTrue( "Jar file entry with non-zero size: " + jarEntryName, entry.getSize() == 0 );
 }
 
-File buildLog = new File(basedir, "build.log");
+target = new File( basedir, "target" );
+jarFile = new File( target, "archetype-jar-manifest-1.0-SNAPSHOT.jar" );
 
-String content = FileUtils.fileRead( buildLog, "UTF-8" );
+assertTrue( "jar file " + jarFile + " does not exist", jarFile.exists() );
 
-int idx = content.indexOf( "Yeah Baby it rocks!");
-if ( idx < 0 )
-{
-    throw new Exception( "build.log missing out.println from verify.groovy" );
-}
+jar = new JarFile( jarFile );
+
+assertJarFileContainsEntryWithNonZeroSize( jar, "archetype-resources/pom.xml" );
+assertJarFileContainsEntryWithNonZeroSize( jar, "archetype-resources/src/main/java/App.java" );
+assertJarFileContainsEntryWithZeroSize( jar, "archetype-resources/src/main/resources/__artifactId__-empty-directory/" );
+assertJarFileContainsEntryWithNonZeroSize( jar, "archetype-resources/src/main/resources/__packageInPathFormat__/__package__.properties" );
+assertJarFileContainsEntryWithZeroSize( jar, "archetype-resources/src/main/resources/empty-directory/" );
+assertJarFileContainsEntryWithNonZeroSize( jar, "archetype-resources/src/main/resources/test-__artifactId__.properties" );
+assertJarFileContainsEntryWithNonZeroSize( jar, "archetype-resources/src/site/apt/__artifactId__.apt" );
+assertJarFileContainsEntryWithNonZeroSize( jar, "META-INF/maven/archetype-metadata.xml" );
